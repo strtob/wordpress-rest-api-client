@@ -3,6 +3,7 @@
 namespace Vnn\WpApiClient\Endpoint;
 
 use GuzzleHttp\Psr7\Request;
+use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 use Vnn\WpApiClient\WpClient;
 
@@ -75,5 +76,46 @@ abstract class AbstractWpEndpoint
         }
 
         throw new RuntimeException('Unexpected response');
+    }
+    
+    public function delete(int $id, array $params = null) : void
+    {
+        $uri = $this->getEndpoint();
+        $uri .= '/'.$id;
+        $uri .= (is_null($params) ? '' : '?'.http_build_query($params));
+
+        $request = new Request('DELETE', $uri);
+        $response = $this->client->send($request);
+
+        if (isset($params['force']) && $params['force'] && !$this->getResponseKey($response, 'deleted', false)) {
+            throw new RuntimeException("Delete not successfull for id {$id} / endpoint: {$this->getEndpoint()}");
+        }
+    }
+    
+      /**
+     * @return bool|mixed
+     */
+    private function getResponseKey(
+        ResponseInterface $response,
+        string $key,
+        bool $throwException = true,
+        $defaultValue = false
+    ) {
+        if (!$response->hasHeader('Content-Type')
+            || substr($response->getHeader('Content-Type')[0], 0, 16) !== 'application/json') {
+            throw new RuntimeException('Unexpected response');
+        }
+
+        $data = json_decode($response->getBody()->getContents(), true);
+
+        if (!isset($data[$key])) {
+            if ($throwException) {
+                throw new RuntimeException("Key {$key} not in response!");
+            }
+
+            return $defaultValue;
+        }
+
+        return $data[$key];
     }
 }

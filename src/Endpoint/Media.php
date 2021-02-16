@@ -61,4 +61,10 @@ class Media extends AbstractWpEndpoint
         }
         throw new RuntimeException('Unexpected response');
     }
+    
+    public function delete(int $id, array $params = null) : void
+    {
+        $params['force'] = true;
+        parent::delete($id, $params);
+    }
 }
